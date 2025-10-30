@@ -327,8 +327,34 @@ elif remove_conf_info:
 else:
     selected_markdown = markdown_output
 
-if selected_markdown.strip():
-    st.write(selected_markdown)
+if markdown_output.strip():
+    st.markdown("""
+        <style>
+        .output-box {
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 15px;
+            color: black;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .copy-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            float: right;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown(f"""
+        <button class="copy-btn" onclick="navigator.clipboard.writeText(`{markdown_output}`)">Copy</button>
+        <div class="output-box">{markdown_output}</div>
+    """, unsafe_allow_html=True)
 else:
     st.write("_No rows to summarise_")
 
@@ -339,7 +365,6 @@ if markdown_output:
         file_name="family_history_summary.md",
         mime="text/markdown"
     )
-    st.markdown("You can copy the markdown above or download it as a `.md` file.")
 
 # Small preview of the processed columns for debugging
 with st.expander("Processed columns preview (debug)"):
