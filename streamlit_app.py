@@ -329,9 +329,8 @@ else:
     selected_markdown = markdown_output
 
 # --- Output text field ---
-with st.container():
-    container = st.container(border=True)
-    st.markdown(f":black[{selected_markdown}]")
+container = st.container(border=True)
+container.markdown({selected_markdown})
 
 # Small preview of the processed columns for debugging
 with st.expander("Processed columns preview (debug)"):
