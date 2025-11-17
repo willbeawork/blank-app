@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import re
 from io import StringIO
+from st_copy import copy_button
 
 st.set_page_config(page_title="FH -> Markdown", layout="wide")
 st.title("FH table→ Markdown Formatted Summary")
@@ -352,6 +353,13 @@ st.html(css)
 
 with st.container(key="styled_container"):
     st.markdown(selected_markdown)
+
+copy_button(
+    (selected_markdown,
+    tooltip="Copy this text",
+    copied_label="Copied!",
+    icon="st",
+)
 
 # Small preview of the processed columns for debugging
 with st.expander("Processed columns preview (debug)"):
