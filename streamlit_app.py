@@ -330,7 +330,7 @@ else:
 
 # --- Output text field ---
 with st.container():
-    st.markdown("### Highlighted Text")
+    container = st.container(border=True)
     st.markdown(f":black[{selected_markdown}]")
 
 # Small preview of the processed columns for debugging
