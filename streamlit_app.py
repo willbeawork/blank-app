@@ -329,7 +329,7 @@ else:
     selected_markdown = markdown_output
 
 # --- Output text field ---
-st.markdown(:black{selected_markdown})
+st.markdown(''':black{selected_markdown}''')
 
 # Small preview of the processed columns for debugging
 with st.expander("Processed columns preview (debug)"):
