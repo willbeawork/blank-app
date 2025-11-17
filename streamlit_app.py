@@ -3,6 +3,8 @@ import pandas as pd
 import re
 from io import StringIO
 
+[theme]
+base="light"
 textColor="black"
 
 st.set_page_config(page_title="FH -> Markdown", layout="wide")
@@ -331,11 +333,8 @@ else:
     selected_markdown = markdown_output
 
 # --- Output text field ---
-st.text_area(
-    "Generated Output",
-    value=selected_markdown,
-    height=300,
-    disabled=True)
+st.write("### Generated Output")
+st.write(f"```\n{selected_markdown}\n```")
 
 # Small preview of the processed columns for debugging
 with st.expander("Processed columns preview (debug)"):
