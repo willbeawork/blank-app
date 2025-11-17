@@ -330,7 +330,7 @@ else:
 
 # --- Output text field ---
 container = st.container(border=True)
-container.markdown({selected_markdown})
+container.markdown(selected_markdown)
 
 # Small preview of the processed columns for debugging
 with st.expander("Processed columns preview (debug)"):
