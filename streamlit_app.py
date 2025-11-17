@@ -3,7 +3,6 @@ import pandas as pd
 import re
 from io import StringIO
 
-[theme]
 textColor="black"
 
 st.set_page_config(page_title="FH -> Markdown", layout="wide")
