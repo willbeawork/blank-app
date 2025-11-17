@@ -329,7 +329,9 @@ else:
     selected_markdown = markdown_output
 
 # --- Output text field ---
-st.markdown(f":black[{selected_markdown}]")
+with st.container():
+    st.markdown("### Highlighted Text")
+    st.markdown(f":black[{selected_markdown}]")
 
 # Small preview of the processed columns for debugging
 with st.expander("Processed columns preview (debug)"):
