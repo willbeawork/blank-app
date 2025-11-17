@@ -318,6 +318,7 @@ st.subheader("Generated Markdown Summary")
 remove_first_name = st.toggle("Remove First Name", value=False)
 remove_conf_info = st.toggle("Remove Confirmation Information", value=False)
 
+# Select the correct markdown output
 if remove_first_name and remove_conf_info:
     selected_markdown = no_confs_and_no_name_markdown_output
 elif remove_first_name:
@@ -327,20 +328,41 @@ elif remove_conf_info:
 else:
     selected_markdown = markdown_output
 
-st.text_area(label="Output Data:", value= if selected_markdown.strip():
-                                               st.write(selected_markdown)
-                                        else:
-                                                st.write("_No rows to summarise_"))
+# ---------------------------
+# ❇️ Visible contrasting box
+# ---------------------------
+st.markdown("### Output Data")
+if selected_markdown.strip():
+    st.code(selected_markdown, language="markdown")
+else:
+    st.code("_No rows to summarise_", language="markdown")
 
-if markdown_output:
-    st.download_button(
-        "Download Markdown (.md)",
-        data=markdown_output,
-        file_name="family_history_summary.md",
-        mime="text/markdown"
-    )
-    st.markdown("You can copy the markdown above or download it as a `.md` file.")
+# ---------------------------
+# 📋 Copy-to-Clipboard Button
+# ---------------------------
+copy_button_html = f"""
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js"></script>
+<button class="copy-btn" data-clipboard-text="{selected_markdown}">Copy to Clipboard</button>
 
+<script>
+new ClipboardJS('.copy-btn');
+</script>
+
+<style>
+.copy-btn {{
+    background-color: #0366d6;
+    color: white;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    margin-top: 10px;
+}}
+.copy-btn:hover {{
+    background-color: #024f9c;
+}}
+</style>
+"""
 # Small preview of the processed columns for debugging
 with st.expander("Processed columns preview (debug)"):
     st.dataframe(proc_df[[
