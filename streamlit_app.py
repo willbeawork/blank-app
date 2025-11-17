@@ -355,7 +355,7 @@ with st.container(key="styled_container"):
     st.markdown(selected_markdown)
 
 copy_button(
-    (selected_markdown,
+    (selected_markdown),
     tooltip="Copy this text",
     copied_label="Copied!",
     icon="st",
