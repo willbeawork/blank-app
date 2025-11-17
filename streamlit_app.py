@@ -328,43 +328,31 @@ elif remove_conf_info:
 else:
     selected_markdown = markdown_output
 
-# ---------------------------
-# ❇️ Visible contrasting box
-# ---------------------------
-st.markdown("### Output Data")
-if selected_markdown.strip():
-    st.code(selected_markdown, language="markdown")
-else:
-    st.code("_No rows to summarise_", language="markdown")
+# --- Output text field ---
+st.text_area(
+    "Generated Output",
+    value=selected_markdown,
+    height=300,
+    disabled=True
 
-# ---------------------------
-# 📋 Copy-to-Clipboard Button
-# ---------------------------
-copy_button_html = f"""
-<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js"></script>
-<button class="copy-btn" data-clipboard-text="{selected_markdown}">Copy to Clipboard</button>
+# --- SIMPLE copy button ---
+components.html(
+    f"""
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js"></script>
 
-<script>
-new ClipboardJS('.copy-btn');
-</script>
+    <button id="copy-btn" data-clipboard-text={repr(selected_markdown)}>
+        Copy to Clipboard
+    </button>
 
-<style>
-.copy-btn {{
-    background-color: #0366d6;
-    color: white;
-    padding: 8px 14px;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-    margin-top: 10px;
-}}
-.copy-btn:hover {{
-    background-color: #024f9c;
-}}
-</style>
-"""
+    <script>
+        new ClipboardJS('#copy-btn');
+    </script>
+    """,
+    height=60,
+)
 # Small preview of the processed columns for debugging
 with st.expander("Processed columns preview (debug)"):
     st.dataframe(proc_df[[
         "Relationship", "Relationship_clean", "First Name", expected_diag_col, "Confirmed/Not confirmed/Abroad"
     ]].head(50), use_container_width=True)
+    
