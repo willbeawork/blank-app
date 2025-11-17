@@ -335,21 +335,6 @@ st.text_area(
     height=300,
     disabled=True)
 
-# --- SIMPLE copy button ---
-components.html(
-    f"""
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js"></script>
-
-    <button id="copy-btn" data-clipboard-text={repr(selected_markdown)}>
-        Copy to Clipboard
-    </button>
-
-    <script>
-        new ClipboardJS('#copy-btn');
-    </script>
-    """,
-    height=60,
-)
 # Small preview of the processed columns for debugging
 with st.expander("Processed columns preview (debug)"):
     st.dataframe(proc_df[[
