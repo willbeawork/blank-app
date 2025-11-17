@@ -328,16 +328,30 @@ elif remove_conf_info:
 else:
     selected_markdown = markdown_output
 
-# --- Output text field ---
-container = st.container(border=True)
-container.st-key-styled_container{
+# -----------------------
+# Create container style
+# -----------------------
+
+css = """
+<style>
+    .st-key-styled_container{
     background-color:lightgray;
-    min-height:100px;
-    box-shadow: 3px 5px 15px 0px rgba(128, 128, 128, 0.245);
-    border=True
-    border: 10ch;
+    padding:2rem;
     }
-container.markdown(selected_markdown)
+
+ .st-key-styled_container div[data-testid="stText"] div{
+    color:black;
+
+}
+</style>"""
+st.html(css)
+
+# -----------------------
+# Create output
+# -----------------------
+
+with st.container(key="styled_container"):
+    st.markdown(selected_markdown)
 
 # Small preview of the processed columns for debugging
 with st.expander("Processed columns preview (debug)"):
