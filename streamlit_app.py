@@ -327,10 +327,10 @@ elif remove_conf_info:
 else:
     selected_markdown = markdown_output
 
-if selected_markdown.strip():
-    st.write(selected_markdown)
-else:
-    st.write("_No rows to summarise_")
+st.text_area(label="Output Data:", value= if selected_markdown.strip():
+                                               st.write(selected_markdown)
+                                        else:
+                                                st.write("_No rows to summarise_"))
 
 if markdown_output:
     st.download_button(
