@@ -330,6 +330,15 @@ else:
 
 # --- Output text field ---
 container = st.container(border=True)
+container.st-key-styled_container{
+    background-color:lightgray;
+    border-radius:1rem;
+    padding:5rem;
+    min-height:100px;
+    box-shadow: 3px 5px 15px 0px rgba(128, 128, 128, 0.245);
+    border=True
+    border: 10ch;
+    }
 container.markdown(selected_markdown)
 
 # Small preview of the processed columns for debugging
