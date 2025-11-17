@@ -333,7 +333,7 @@ st.text_area(
     "Generated Output",
     value=selected_markdown,
     height=300,
-    disabled=True
+    disabled=True)
 
 # --- SIMPLE copy button ---
 components.html(
