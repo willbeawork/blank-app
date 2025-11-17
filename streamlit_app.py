@@ -329,8 +329,7 @@ else:
     selected_markdown = markdown_output
 
 # --- Output text field ---
-st.write("### Generated Output")
-st.write(f"```\n{selected_markdown}\n```")
+st.markdown(f"```{selected_markdown}```")
 
 # Small preview of the processed columns for debugging
 with st.expander("Processed columns preview (debug)"):
