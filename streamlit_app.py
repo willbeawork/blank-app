@@ -3,10 +3,6 @@ import pandas as pd
 import re
 from io import StringIO
 
-[theme]
-base="light"
-textColor="black"
-
 st.set_page_config(page_title="FH -> Markdown", layout="wide")
 st.title("FH table→ Markdown Formatted Summary")
 st.markdown("Paste tab-separated family-history data, edit the table, and generate a markdown summary.")
