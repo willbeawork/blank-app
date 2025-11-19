@@ -12,6 +12,53 @@ st.markdown("Paste tab-separated family-history data, edit the table, and genera
 if "selected_option" not in st.session_state:
     st.session_state.selected_option = "Paste Raw Data"   # Default pre-selected
 
+#Make an empty df for manual input mode
+if "manual_df" not in st.session_state:
+    # Initialize empty editable DataFrame for Manual Input
+    st.session_state.manual_df = pd.DataFrame(columns=[
+        "Relationship",
+        "First Name",
+        "Diagnosis (laterality, hormones, subtype)@age",
+        "Confirmed/Not confirmed/Abroad"
+    ])
+
+#Define a function to 'Parse' (Reformat pasted data)
+def parse_raw_data(raw_data: str) -> pd.DataFrame:
+    if not raw_data or not raw_data.strip():
+        return pd.DataFrame()
+
+    lines = [line.strip() for line in raw_data.strip().split('\n') if line.strip()]
+    if not lines:
+        return pd.DataFrame()
+
+    header = lines[0].split("\t")
+    data_lines = lines[1:]
+
+    records = []
+    temp = []
+
+    # combine multiline rows
+    for line in data_lines:
+        if line.count("\t") >= 2:
+            if temp:
+                records.append(temp)
+            temp = [line]
+        else:
+            temp.append(line)
+    if temp:
+        records.append(temp)
+
+    processed = []
+    for record in records:
+        full_line = " ".join(record)
+        parts = full_line.split("\t")
+
+        while len(parts) < len(header):
+            parts.append("")
+        processed.append(dict(zip(header, parts)))
+
+    return pd.DataFrame(processed)
+
 def select_option(option):
     st.session_state.selected_option = option
 
@@ -32,101 +79,74 @@ with right:
 st.write(f"🔍 **Current Input Mode:** {st.session_state.selected_option}")
 
 # -----------------------
-# Helper: parse raw pasted data (multiline merging logic you provided)
+# Define session states and respective input UIs
 # -----------------------
-def parse_raw_data(raw_data: str) -> pd.DataFrame:
-    if not raw_data or not raw_data.strip():
-        return pd.DataFrame()
-
-    # Clean and split lines
-    lines = [line.strip() for line in raw_data.strip().split('\n') if line.strip()]
-    if not lines:
-        return pd.DataFrame()
-
-    header = lines[0].split('\t')
-    data_lines = lines[1:]
-
-    # Combine multiline records
-    records = []
-    temp = []
-    for line in data_lines:
-        if line.count('\t') >= 2:  # new full row
-            if temp:
-                records.append(temp)
-            temp = [line]
-        else:
-            temp.append(line)
-    if temp:
-        records.append(temp)
-
-    processed = []
-    for record in records:
-        full_line = ' '.join(record).replace('\t', '\t', 1)
-        parts = full_line.split('\t')
-
-        # Ensure same length as header
-        while len(parts) < len(header):
-            parts.append('')
-        processed.append(dict(zip(header, parts)))
-
-    return pd.DataFrame(processed)
-
-# -----------------------
-# UI: input area + optional file upload
-# -----------------------
-with st.expander("How to use"):
-    st.write(
-        """
-        - Paste tab-separated text (including header row) into the box below, or upload a CSV/TSV/Excel file.
-        - Edit the table directly using the editor.
-        - Click **Generate Markdown** to create the summary.
-        """
-    )
-
-col1, col2 = st.columns([2, 1])
-
-with col1:
+# --- PASTE RAW DATA ---
+if st.session_state.selected_option == "Paste Raw Data":
+    with st.expander("How to use"):
+        st.write(
+            """
+            - Paste tab-separated text (including header row) into the box below, or upload a CSV/TSV/Excel file.
+            - Edit the table directly using the editor.
+            - Click **Generate Markdown** to create the summary.
+            """
+        )
     raw_data = st.text_area(
-        "Paste raw table data here (tab-separated). Include header row. Example header:",
+        "Paste raw table data here (tab-separated). Include header row.",
         value="Relationship\tFirst Name\tDiagnosis (laterality, hormones, subtype)@age\tConfirmed/Not confirmed/Abroad",
         height=200,
         help="You can copy table rows from Excel/Google Sheets then paste here."
     )
-
-with col2:
+    df = parse_raw_data(raw_data)
+# --- FILE UPLOAD ---
+if st.session_state.selected_option == "CSV/XLSX File":  
+    st.write("- Header names must be: " )
+    st.write("Relationship | First Name | Diagnosis (additional info)@age | Confirmed/Not confirmed/Abroad")
     uploaded = st.file_uploader("Or upload CSV / TSV / XLSX", type=["csv", "tsv", "xlsx", "xls"])
     st.write("Preview / examples")
-    st.write("- Header names must include the diagnosis column name shown above.")
 
-# If uploaded file present, read it and override raw_data
-if uploaded:
-    try:
-        if uploaded.name.endswith((".xls", ".xlsx")):
-            df_uploaded = pd.read_excel(uploaded)
-        else:
-            try:
-                df_uploaded = pd.read_csv(uploaded)
-            except Exception:
-                uploaded.seek(0)
-                df_uploaded = pd.read_csv(uploaded, sep='\t')
-        df = df_uploaded.copy()
-    except Exception as e:
-        st.error(f"Failed to read uploaded file: {e}")
-        df = pd.DataFrame()
-else:
-    # Parse pasted raw_data
-    if raw_data and raw_data.strip():
-        df = parse_raw_data(raw_data)
-    else:
-        # Empty default
-        df = pd.DataFrame(columns=[
-            "Relationship",
-            "First Name",
-            "Diagnosis (laterality, hormones, subtype)@age",
-            "Confirmed/Not confirmed/Abroad"
-        ])
+    # If uploaded file present, read it and override raw_data
+    if uploaded:
+        try:
+            if uploaded.name.endswith((".xls", ".xlsx")):
+                df_uploaded = pd.read_excel(uploaded)
+            else:
+                try:
+                    df_uploaded = pd.read_csv(uploaded)
+                except Exception:
+                    uploaded.seek(0)
+                    df_uploaded = pd.read_csv(uploaded, sep='\t')
+            df = df_uploaded.copy()
+        except Exception as e:
+            st.error(f"Failed to read uploaded file: {e}")
+            df = pd.DataFrame()
+
+# --- MANUAL INPUT ---
+if st.session_state.selected_option == "Manual Input":
+    st.subheader("Input & Edit Table")
+    st.markdown("WARNING ⚠️: Any information in brackets will be removed from the diagnosis section")
+    # Show editable DataFrame
+    edited_df = st.data_editor(
+        st.session_state.manual_df,
+        use_container_width=True,
+        num_rows="dynamic",   # allows adding new rows
+        hide_index=True       # optional: hides the index column
+    )
 
 # Normalize columns if slightly different names (common variations)
+# FIX: Ensure df always exists depending on mode
+if st.session_state.selected_option == "Paste Raw Data":
+    df = parse_raw_data(raw_data)
+
+elif st.session_state.selected_option == "CSV/XLSX File":
+    if uploaded:
+        df = df_uploaded.copy()
+    else:
+        df = pd.DataFrame()
+
+elif st.session_state.selected_option == "Manual Input":
+    df = edited_df.copy()
+
 expected_diag_col = "Diagnosis (laterality, hormones, subtype)@age"
 alt_diag_cols = [c for c in df.columns if "diagnos" in c.lower() and "age" in c.lower()]
 
@@ -134,9 +154,13 @@ if expected_diag_col not in df.columns and alt_diag_cols:
     df = df.rename(columns={alt_diag_cols[0]: expected_diag_col})
 
 # Ensure columns exist
-for col in ["Relationship", "First Name", expected_diag_col, "Confirmed/Not confirmed/Abroad"]:
+required_cols = ["Relationship", "First Name", expected_diag_col,
+                 "Confirmed/Not confirmed/Abroad"]
+
+for col in required_cols:
     if col not in df.columns:
         df[col] = ""
+
 
 # Show editable table
 st.subheader("Review / Edit Table")
