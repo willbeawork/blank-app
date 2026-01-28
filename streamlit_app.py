@@ -300,6 +300,7 @@ def clean_single_dx(text):
     text = convert_at_symbols(text)
     # change crc to colorectal
     text = re.sub(r'\bcrc\b', 'colorectal', text)
+    text = re.sub(r'cervix', 'cervical', text)
     # exceptions where we shouldn't append 'cancer'
     exceptions = [
         'leukaemia', 'lymphoma', 'melanoma', 'multiple myeloma',
@@ -328,6 +329,12 @@ def clean_diagnosis(text):
     if pd.isna(text):
         return ""
     text = str(text).strip()
+
+    # removing brackets
+    text = re.sub(r'\s*\(.*?\)\s*', '', text)
+    # remove trailing spaces
+    text = text.rstrip()
+
     # If no @ present → simple path
     if '@' not in text:
         return clean_single_dx(text)
@@ -396,8 +403,6 @@ proc_df['Relationship_clean'] = proc_df['Relationship_clean'].apply(lambda x: se
 proc_df[expected_diag_col] = proc_df[expected_diag_col].astype(str)
 proc_df[expected_diag_col] = proc_df[expected_diag_col].apply(clean_diagnosis)
 proc_df[expected_diag_col] = proc_df[expected_diag_col].apply(convert_at_symbols)
-# remove bracketed text
-proc_df[expected_diag_col] = proc_df[expected_diag_col].str.replace(r'\(.*?\)', '', regex=True).str.strip()
 
 # -----------------------
 # Build the markdown summary lines
