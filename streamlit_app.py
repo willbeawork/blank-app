@@ -4,13 +4,17 @@ import re
 from io import StringIO
 from st_copy import copy_button
 
-st.set_page_config(page_title="FH -> Markdown", layout="wide")
-st.title("FH table→ Markdown Formatted Summary")
-st.markdown("Paste tab-separated family-history data, edit the table, and generate a markdown summary.")
-
 # --- Initialise session_state for selection ---
 if "selected_option" not in st.session_state:
     st.session_state.selected_option = "Paste Raw Data"   # Default pre-selected
+
+def select_option(option):
+    st.session_state.selected_option = option
+
+st.set_page_config(page_title="FH -> Markdown", layout="wide")
+st.title("FH table -> Formatted Summary")
+st.write(f"Developed for use by cancer genetics clinicans")
+st.write(f"🔍 **Current Input Mode:** {st.session_state.selected_option}")
 
 #Make an empty df for manual input mode
 if "manual_df" not in st.session_state:
@@ -65,24 +69,26 @@ def select_option(option):
 left, middle, right = st.columns(3)
 
 with left:
-    if st.button("Paste Raw Data",width="stretch"):
+    if st.button("*Paste Raw Data*",width="stretch"):
         select_option("Paste Raw Data")
 
 with middle:
-    if st.button("CSV/XLSX File",width="stretch"):
+    if st.button("*CSV/XLSX File*",width="stretch"):
         select_option("CSV/XLSX File")
 
 with right:
-    if st.button("Manual Input",width="stretch"):
+    if st.button("*Manual Input*",width="stretch"):
         select_option("Manual Input")
-
-st.write(f"🔍 **Current Input Mode:** {st.session_state.selected_option}")
 
 # -----------------------
 # Define session states and respective input UIs
 # -----------------------
+
+
 # --- PASTE RAW DATA ---
+
 if st.session_state.selected_option == "Paste Raw Data":
+    st.subheader("Paste raw table data here")
     with st.expander("How to use"):
         st.write(
             """
@@ -91,13 +97,25 @@ if st.session_state.selected_option == "Paste Raw Data":
             - Click **Generate Markdown** to create the summary.
             """
         )
-    raw_data = st.text_area(
-        "Paste raw table data here (tab-separated). Include header row.",
-        value="Relationship\tFirst Name\tDiagnosis (laterality, hormones, subtype)@age\tConfirmed/Not confirmed/Abroad",
-        height=200,
-        help="You can copy table rows from Excel/Google Sheets then paste here."
-    )
-    df = parse_raw_data(raw_data)
+    with st.form("raw_data_form"):
+        st.write("Include header row")
+
+        raw_data = st.text_area(
+            label="",
+            value="Relationship\tFirst Name\tDiagnosis (laterality, hormones, subtype)@age\tConfirmed/Not confirmed/Abroad",
+            height=200,
+            help="You can copy table rows from Excel/Google Sheets then paste here."
+)
+
+        # Submit button (also triggered by CTRL+Enter)
+        submitted = st.form_submit_button("Submit")
+
+    # Handle submission
+    if submitted:
+        st.session_state.raw_submitted = raw_data
+        st.session_state.raw_df = parse_raw_data(raw_data)
+
+
 # --- FILE UPLOAD ---
 if st.session_state.selected_option == "CSV/XLSX File":  
     st.write("- Header names must be: " )
@@ -124,7 +142,7 @@ if st.session_state.selected_option == "CSV/XLSX File":
 # --- MANUAL INPUT ---
 if st.session_state.selected_option == "Manual Input":
     st.subheader("Input & Edit Table")
-    st.markdown("WARNING ⚠️: Any information in brackets will be removed from the diagnosis section")
+    st.markdown("⚠️WARNING: Any information in brackets will be removed from the diagnosis section")
     # Show editable DataFrame
     edited_df = st.data_editor(
         st.session_state.manual_df,
@@ -132,6 +150,29 @@ if st.session_state.selected_option == "Manual Input":
         num_rows="dynamic",   # allows adding new rows
         hide_index=True       # optional: hides the index column
     )
+    # --- Example table in an expander ---
+    with st.expander("***Example Table (Read-only)***"):
+        example_data = pd.DataFrame([
+        {
+            "Relationship": "Father",
+            "First Name": "Dennis",
+            "Diagnosis (laterality, hormones, subtype)@age": "Prostate@56 (Adenocarcinoma, Confined to prostate)",
+            "Confirmed/Not confirmed/Abroad": "Confirmed"
+        },
+        {
+            "Relationship": "Paternal Aunt",
+            "First Name": "Alice",
+            "Diagnosis (laterality, hormones, subtype)@age": "Breast@60 (Grade 1, ER+)",
+            "Confirmed/Not confirmed/Abroad": "Confirmed, In Australia"
+        }
+        ])
+
+        # Style example table: italics + grey background
+        def style_example(row):
+            return ['font-style: italic; background-color: #f0f0f0'] * len(row)
+
+
+        st.dataframe(example_data.style.apply(style_example, axis=1), use_container_width=True)
 
 # Normalize columns if slightly different names (common variations)
 # FIX: Ensure df always exists depending on mode
@@ -162,55 +203,63 @@ for col in required_cols:
         df[col] = ""
 
 
-# Show editable table
-st.subheader("Review / Edit Table")
-st.markdown("WARNING: Any information in brackets will be removed from the diagnosis section")
-edited_df = st.data_editor(df, use_container_width=True)
+# Show editable table for raw data and file upload inputs but not manual input
+if st.session_state.selected_option in ["Paste Raw Data", "CSV/XLSX File"]:
+    st.subheader("Review / Edit Table")
+    st.markdown("WARNING: Any information in brackets will be removed from the diagnosis section")
+    edited_df = st.data_editor(df, use_container_width=True)
+
 # -----------------------
 # Text transformation logic (your provided functions, adjusted)
 # -----------------------
 word_dict = {
-    "maternal" : ["Mat", "mat"],
-    "paternal" : ["Pat", "pat"],
-    "sibling" : ["Sib", "sib"],
-    "father" : ["Dad", "dad"],
-    "mother" : ["Mum", "mum"],
-    "sister" : ["Sis", "sis"],
-    "brother" : ["Bro", "bro"],
-    "aunt" : ["Aunt", "aunt"],
-    "uncle" : ["Uncle", "unc", "Unc"],
-    "niece" : ["Niece", "niece"],
-    "nephew" : ["Nephew", "nephew"],
-    "cousin" : ["Cous", "Cous,", "cous", "cous,"],
-    "maternal grandmother": ["MGM", "MGM,"],
-    "paternal grandmother" : ["PGM", "PGM,"],
-    "paternal grandfather" : ["PGF" , "PGF,"],
-    "maternal grandfather" : ["MGF" , "MGF,"],
-    "grandfather" : ["GF"],
-    "grandmother" : ["GM"],
-    "maternal great grandfather" : ["MGGF"],
-    "paternal great grandfather" : ["PGGF"],
-    "paternal great grandmother" : ["PGGM"],
-    "maternal great grandmother" : ["MGGM"]
+    "maternal": ["mat", "mat"],
+    "maternal " : ["M.", "m.","m. "],
+    "paternal": ["pat", "pat"],
+    "paternal " : ["P.", "p.", "p. "],
+    "sibling": ["sib", "sib"],
+    "father": ["dad", "dad"],
+    "mother": ["mum", "mum"],
+    "sister": ["sis", "sis"],
+    "brother": ["bro", "bro"],
+    "aunt": ["aunt", "aunt"],
+    "uncle": ["uncle", "unc", "unc"],
+    "niece": ["niece", "niece"],
+    "nephew": ["nephew", "nephew"],
+    "cousin": ["cous", "cous,", "cous", "cous,"],
+    "maternal grandmother": ["mgm", "mgm,"],
+    "paternal grandmother": ["pgm", "pgm,"],
+    "paternal grandfather": ["pgf", "pgf,"],
+    "maternal grandfather": ["mgf", "mgf,"],
+    "grandfather": ["gf"],
+    "grandmother": ["gm"],
+    "great grandfather": ["ggf"],
+    "great grandmother": ["ggm"],
+    "maternal great grandfather": ["mggf"],
+    "paternal great grandfather": ["pggf"],
+    "paternal great grandmother": ["pggm"],
+    "maternal great grandmother": ["mggm"],
+    "":["my"]
 }
 
 second_dict = {
-    "Your father" : "Father",
-    "Your mother" : "Mother",
-    "Your brother" : "Brother",
-    "Your sister" : "Sister",
-    "Your paternal" : "paternal",
-    "Your maternal" : "maternal",
-    "You" : "Patient"
+    "Your father": "father",
+    "Your mother": "mother",
+    "Your brother": "brother",
+    "Your sister": "sister",
+    "Your paternal": "paternal",
+    "Your maternal": "maternal",
+    "You": ["you","patient","me"]
 }
 
 def text_change(text, word_dict):
+    text = str(text).lower()
     if pd.isna(text):
         return ""
     for update, originals in word_dict.items():
         for original in originals:
             # skip certain replacements if part of a longer word
-            if original.lower() in ["sis", "mat", "pat", "bro","gm","gf","GM","GF"]:
+            if original.lower() in ["sis", "mat", "pat", "bro","gm","gf"]:
                 # only match if the word is standalone (not part of sister/maternal etc)
                 pattern = rf'(?<!\w){re.escape(original)}(?![a-zA-Z])'
             else:
@@ -221,9 +270,16 @@ def text_change(text, word_dict):
 def second_change(incomplete_text, second_dict):
     if pd.isna(incomplete_text):
         return ""
+    text = str(incomplete_text)
     for new, old in second_dict.items():
-        incomplete_text = incomplete_text.replace(old, new)
-    return incomplete_text
+        if isinstance(old, list):
+            for o in old:
+                pattern = rf'\b{o}\b'
+                text = re.sub(pattern, new, text, flags=re.IGNORECASE)
+        else:
+            pattern = rf'\b{old}\b'
+            text = re.sub(pattern, new, text, flags=re.IGNORECASE)
+    return text
 
 def convert_at_symbols(text):
     if pd.isna(text):
@@ -237,26 +293,97 @@ def convert_at_symbols(text):
     text = re.sub(r'@(\d{1,3})(?!\d|s)', r' aged \1', text)
     return text
 
-def clean_diagnosis(text):
-    if pd.isna(text):
-        return ""
-    text = str(text).lower().strip()
+
+def clean_single_dx(text):
+    """Cleans one *single* diagnosis."""
+    text = text.lower().strip()
+    text = convert_at_symbols(text)
     # change crc to colorectal
     text = re.sub(r'\bcrc\b', 'colorectal', text)
     # exceptions where we shouldn't append 'cancer'
-    exceptions = ['leukaemia', 'lymphoma', 'melanoma', 'multiple myeloma','polyps']
+    exceptions = [
+        'leukaemia', 'lymphoma', 'melanoma', 'multiple myeloma',
+        'polyps', 'cancer of', 'dcis', 'lcis', 'brain tumour']
     if any(exc in text for exc in exceptions):
-        return text
-    # split before age info (which starts with patterns we've used)
+        return re.sub(r'\bcancer(?:\s+cancer)+', 'cancer', text).strip()
+    # split of age info
     parts = re.split(r'(@\?|@\d{1,3}s?| aged \d{1,3}| in their \d{2}s| at an unknown age)', text)
     if len(parts) > 1:
-        return parts[0].strip() + ' cancer ' + ''.join(parts[1:]).strip()
+        dx = parts[0].strip()
+        if 'cancer' not in dx:
+            dx += ' cancer'
+        result = dx + ' ' + ''.join(parts[1:]).strip()
     else:
-        # If no age info, just add ' cancer' to the end (unless already contains 'cancer')
         if 'cancer' in text:
-            return text
-        return text + ' cancer'
+            result = text
+        else:
+            result = text + ' cancer'
+    # remove duplicate cancer
+    result = re.sub(r'\bcancer(?:\s+cancer)+', 'cancer', result)
+    return result.strip()
 
+
+def clean_diagnosis(text):
+    """Handles multiple diagnoses by splitting after the first space following each '@...'."""
+    if pd.isna(text):
+        return ""
+    text = str(text).strip()
+    # If no @ present → simple path
+    if '@' not in text:
+        return clean_single_dx(text)
+    parts = []
+    start = 0
+    # Pattern to match @?, @55, @70s, etc.
+    age_pattern = re.compile(r'@( \?|\d{1,3}s?|\?)')
+    # Find each @ and follow until the next space
+    for match in re.finditer(r'@', text):
+        # Find the end of the age info: @55, @?, @70s…
+        age_match = re.match(r'@\d{1,3}s?|@\?', text[match.start():])
+        if age_match:
+            age_end = match.start() + len(age_match.group())
+        else:
+            age_end = match.start() + 1  # fallback
+        # Find first space AFTER age block
+        next_space = text.find(' ', age_end)
+        if next_space != -1:
+            # Add text from previous start to this split point
+            parts.append(text[start:next_space].strip())
+            start = next_space + 1
+    # Add final piece
+    parts.append(text[start:].strip())
+    # Clean each diagnosis
+    cleaned = [clean_single_dx(p) for p in parts if p]
+    return " and ".join(cleaned)
+
+def parse_confirmation(text: str) -> str:
+    """
+    Standardize user-entered confirmation status.
+    
+    Returns one of:
+        - 'Confirmed'
+        - 'Not confirmed'
+        - 'Unconfirmed'
+    or flags with 🚩Review🚩 if invalid.
+    
+    Handles optional trailing spaces or full stops.
+    """
+    if pd.isna(text) or str(text).strip() == "":
+        return ""
+    
+    # Remove leading/trailing whitespace and trailing period
+    cleaned_text = str(text).strip().rstrip(".").lower()
+    
+    # Standardize the three allowed options
+    if cleaned_text == "confirmed":
+        return "Confirmed"
+    elif cleaned_text == "not confirmed":
+        return "Not confirmed"
+    elif cleaned_text == "unconfirmed":
+        return "Unconfirmed"
+    else:
+        # Flag invalid entries
+        return f"{text} 🚩Review🚩"
+    
 # Apply conversions to the edited dataframe copy
 proc_df = edited_df.copy()
 proc_df = proc_df.fillna("")
@@ -267,8 +394,8 @@ proc_df['Relationship_clean'] = proc_df['Relationship_clean'].apply(lambda x: se
 
 # Diagnosis transformation
 proc_df[expected_diag_col] = proc_df[expected_diag_col].astype(str)
-proc_df[expected_diag_col] = proc_df[expected_diag_col].apply(convert_at_symbols)
 proc_df[expected_diag_col] = proc_df[expected_diag_col].apply(clean_diagnosis)
+proc_df[expected_diag_col] = proc_df[expected_diag_col].apply(convert_at_symbols)
 # remove bracketed text
 proc_df[expected_diag_col] = proc_df[expected_diag_col].str.replace(r'\(.*?\)', '', regex=True).str.strip()
 
@@ -290,19 +417,23 @@ def build_line(row) -> str:
     rel = str(row.get('Relationship_clean','')).strip()
     first = str(row.get('First Name','')).strip()
     diag = str(row.get(expected_diag_col,'')).strip()
-    conf = str(row.get('Confirmed/Not confirmed/Abroad','')).strip()
+    conf = parse_confirmation(row.get('Confirmed/Not confirmed/Abroad',''))
     phrase = make_phrase(conf)
+    if rel.lower() == 'you':
+        return f"{rel} were diagnosed with {diag}- *{conf}*"
     # Format: Relationship, Firstname, phrase diagnosis - status
     if first and first.lower() not in ['nan','none','']:
-        return f"{rel}, {first}, {phrase} {diag} - {conf}"
+        return f"{rel}, {first}, {phrase} {diag} - *{conf}*"
     else:
-        return f"{rel}, {phrase} {diag} - {conf}"
+        return f"{rel}, {phrase} {diag} - *{conf}*"
 
 def no_name_build_line(row) -> str:
     rel = str(row.get('Relationship_clean', '')).strip()
     diag = str(row.get(expected_diag_col, '')).strip()
     conf = str(row.get('Confirmed/Not confirmed/Abroad', '')).strip()
     phrase = make_phrase(conf)
+    if rel.lower() == 'you':
+        return f"{rel} were diagnosed with {diag}- *{conf}*"
     # Format: - Relationship phrase diagnosis - status (no first name)
     return f"{rel} {phrase} {diag} - *{conf}*"
 
@@ -312,12 +443,20 @@ def no_confs_build_line(row) -> str:
     diag = str(row.get(expected_diag_col, '')).strip()
     phrase = "was diagnosed with"
     # Format: - Relationship, phrase diagnosis (no conf info)
-    return f"{rel}, {first}, {phrase} {diag}"
+    if rel.lower() == 'you':
+        return f"{rel} were diagnosed with {diag}"
+    # Format: Relationship, Firstname, phrase diagnosis - status
+    if first and first.lower() not in ['nan','none','']:
+        return f"{rel}, {first}, {phrase} {diag}"
+    else:
+        return f"{rel}, {phrase} {diag}"
 
 def no_confs_and_no_name_build_line(row) -> str:
     rel = str(row.get('Relationship_clean', '')).strip()
     diag = str(row.get(expected_diag_col, '')).strip()
     phrase = "was diagnosed with"
+    if rel.lower() == 'you':
+        return f"{rel} were diagnosed with {diag}*"
     # Format: - Relationship default phrase diagnosis (no first name or confs)
     return f"{rel} {phrase} {diag}"
 
